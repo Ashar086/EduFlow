@@ -1,0 +1,83 @@
+import streamlit as st
+import speech_recognition as sr
+from PIL import Image
+from io import BytesIO
+import requests
+
+# Initialize recognizer
+recognizer = sr.Recognizer()
+
+# AI/ML API key
+API_KEY = "api-key"
+# Replace with your actual TTS API endpoint
+TTS_API_URL = "https://api.yourttsprovider.com/v1/text-to-speech"
+
+def text_to_speech(text):
+    """Send text to the TTS API and get the audio response."""
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {API_KEY}"
+    }
+    data = {
+        "text": text,
+        "voice": "en-US"
+    }
+    response = requests.post(TTS_API_URL, headers=headers, json=data)
+    if response.status_code == 200:
+        return response.content
+    else:
+        st.error(f"Failed to fetch audio from TTS API: {response.text}")
+        return None
+
+def main():
+    st.set_page_config(page_title="EduTonic Chatbot", layout="wide")
+    st.title("EduTonic Chatbot")
+
+    # Define columns for layout
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    # Text Input Section
+    with col1:
+        st.header("Text Input")
+        user_input = st.text_input("Enter your message:")
+
+        # Microphone Input
+        st.header("Microphone Input")
+        if st.button("Record Audio"):
+            with sr.Microphone() as source:
+                st.write("Recording...")
+                audio_data = recognizer.listen(source)
+                st.write("Done recording!")
+                try:
+                    user_input_audio = recognizer.recognize_google(audio_data)
+                    st.write(f"Recognized: {user_input_audio}")
+                    user_input = user_input_audio
+                except sr.UnknownValueError:
+                    st.error("Could not understand audio")
+                except sr.RequestError as e:
+                    st.error(f"Could not request results; {e}")
+
+    # Camera Input Section
+    with col2:
+        st.header("Camera Input")
+        image = st.camera_input("Capture an image")
+
+    # Text Outputs Section
+    with col3:
+        if user_input:
+            st.header("Text Outputs")
+            st.subheader("Echoed Text")
+            st.write(user_input)
+
+            reversed_text = user_input[::-1]
+            st.subheader("Reversed Text")
+            st.write(reversed_text)
+
+            # Audio Output Section
+            st.header("Audio Output")
+            audio_data = text_to_speech(user_input)
+            if audio_data:
+                st.audio(audio_data, format='audio/wav')
+
+if __name__ == "__main__":
+    main()
